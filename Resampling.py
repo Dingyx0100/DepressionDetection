@@ -2,9 +2,7 @@ import os
 import numpy as np
 
 """
-list possible resampling method here:
-1. Using all depression samples and sample from the non-depression ones to balance the datasets
-2. 
+The basic idea of resampling and grouping:
 """
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
 atrain_features = np.load(os.path.join(prefix, 'DAICCode/Features/train_samples_clf.npz'), allow_pickle=True)['arr_0']
