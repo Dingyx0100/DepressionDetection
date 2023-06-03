@@ -2,7 +2,6 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 
 import sys
-# sys.path.append('/Users/linlin/Desktop/DepressionCollected')
 from Classification.audio_features_whole import wav2vlad
 
 import numpy as np
@@ -12,7 +11,7 @@ import wave
 import jieba
 
 from elmoformanylangs import Embedder
-elmo = Embedder('../autodl-tmp/eng.model')
+elmo = Embedder('./eng.model')
 
 
 prefix = os.getcwd()
@@ -37,9 +36,9 @@ def identify_topics(sentence):
     return False
 
 def extract_features(number):
-    transcript = pd.read_csv(os.path.join('../autodl-tmp/Transcript/{0}_TRANSCRIPT.csv'.format(number)), sep='\t').fillna('')
+    transcript = pd.read_csv(os.path.join('./Transcript/{0}_TRANSCRIPT.csv'.format(number)), sep='\t').fillna('')
     
-    wavefile = wave.open(os.path.join('../autodl-tmp/audio_data/{0}_AUDIO.wav'.format(number, 'r')))
+    wavefile = wave.open(os.path.join('./audio_data/{0}_AUDIO.wav'.format(number, 'r')))
     sr = wavefile.getframerate()
     nframes = wavefile.getnframes()
     wave_data = np.frombuffer(wavefile.readframes(nframes), dtype=np.short)
@@ -53,9 +52,8 @@ def extract_features(number):
     seg_text_iter = []
 
     for t in transcript.itertuples():
-        # 问题开始
         if getattr(t,'speaker') == 'Ellie' and (identify_topics(getattr(t,'value')) or 'i think i have asked everything' in getattr(t,'value')):
-            # 初始化
+            # Initialization
             response = ''
             if len(signal) == 0:
                 continue
@@ -70,8 +68,7 @@ def extract_features(number):
             response += (' ' + getattr(t,'value'))
             seg_text_iter.append(jieba.cut(getattr(t,'value'), cut_all=False))
             signal = np.hstack((signal, wave_data[start_time:stop_time].astype(np.float64)))
-    
-#     text_feats = [np.array(item).mean(axis=0) for item in elmo.sents2elmo(text)]
+
     print(np.shape(feats))
     print('{}_P feature done'.format(number))
     return feats,text
@@ -96,22 +93,6 @@ audio_rtargets_test = []
 for index in range(len(train_split_num)):
     feat,text_feats = extract_features(train_split_num[index])
     text_feats = [np.array(item).mean(axis=0) for item in elmo.sents2elmo(text_feats)]
-#     if train_split_clabel[index] == 0:
-#         sample = np.random.choice(len(feat)//5, 2, replace=False)
-#         for i in range(2):
-#             st = sample[i]
-#             audio_features_train.append(np.squeeze(np.array(feat)[st*5: (st+1)*5]))
-#             text_features_train.append(np.array(text_feats)[st*5: (st+1)*5])
-#             audio_ctargets_train.append(train_split_clabel[index])
-#             audio_rtargets_train.append(train_split_rlabel[index])
-#     else:
-#         sample = np.random.choice(len(feat)//5, 5, replace=False)
-#         for i in range(5):
-#             st = sample[i]
-#             audio_features_train.append(np.squeeze(np.array(feat)[st*5: (st+1)*5]))
-#             text_features_train.append(np.array(text_feats)[st*5: (st+1)*5])
-#             audio_ctargets_train.append(train_split_clabel[index])
-#             audio_rtargets_train.append(train_split_rlabel[index])
     audio_features_train.append(np.squeeze(np.array(feat)))
     text_features_train.append(np.array(text_feats))
     audio_ctargets_train.append(train_split_clabel[index])
@@ -130,13 +111,6 @@ for index in range(len(test_split_num)):
         continue
     feat,text_feats = extract_features(test_split_num[index])
     text_feats = [np.array(item).mean(axis=0) for item in elmo.sents2elmo(text_feats)]
-#     sample = np.random.choice(len(feat)//5, 2, replace=False)
-#     for i in range(2):
-#         st = sample[i]
-#         audio_features_test.append(np.squeeze(np.array(feat)[st*5: (st+1)*5]))
-#         text_features_test.append(np.array(text_feats)[st*5: (st+1)*5])
-#         audio_ctargets_test.append(test_split_clabel[index])
-#         audio_rtargets_test.append(test_split_rlabel[index])
     audio_features_test.append(np.squeeze(np.array(feat)))
     text_features_test.append(np.array(text_feats))
     audio_ctargets_test.append(test_split_clabel[index])
