@@ -15,10 +15,7 @@ import random
 import itertools
 
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
-# text_features = np.load(os.path.join(prefix, 'Features/TextWhole/whole_samples_clf_avg.npz'))['arr_0']
-# text_targets = np.load(os.path.join(prefix, 'Features/TextWhole/whole_labels_clf_avg.npz'))['arr_0']
-# text_dep_idxs_tmp = np.where(text_targets == 1)[0]
-# text_non_idxs = np.where(text_targets == 0)[0]
+
 train_features = np.load(os.path.join(prefix, 'DAICCode/Features3/train_text_clf.npz'), allow_pickle=True)['arr_0']
 train_targets = np.load(os.path.join(prefix, 'DAICCode/Features3/train_labels_clf.npz'), allow_pickle=True)['arr_0']
 test_features = np.load(os.path.join(prefix, 'DAICCode/Features3/test_text_clf.npz'), allow_pickle=True)['arr_0']
@@ -167,8 +164,6 @@ def train(epoch, train_idxs):
     batch_idx = 1
     total_loss = 0
     correct = 0
-#     X_train = text_features[train_idxs]
-#     Y_train = text_targets[train_idxs]
     X_train = train_features
     Y_train = train_targets
     for i in range(0, X_train.shape[0], config['batch_size']):
@@ -213,13 +208,9 @@ def evaluate(model, test_idxs, fold, train_idxs):
     pred = np.array([])
     with torch.no_grad():
         if config['cuda']:
-#             x, y = Variable(torch.from_numpy(audio_features[test_idxs]).type(torch.FloatTensor), requires_grad=True).cuda(),\
-#                 Variable(torch.from_numpy(audio_targets[test_idxs])).cuda()
             x, y = Variable(torch.from_numpy(test_features).type(torch.FloatTensor), requires_grad=True).cuda(),\
                 Variable(torch.from_numpy(test_targets)).cuda()
         else:
-#             x, y = Variable(torch.from_numpy(audio_features[test_idxs]).type(torch.FloatTensor), requires_grad=True), \
-#                 Variable(torch.from_numpy(audio_targets[test_idxs])).type(torch.LongTensor)
             x, y = Variable(torch.from_numpy(test_features).type(torch.FloatTensor), requires_grad=True), \
                 Variable(torch.from_numpy(test_targets)).type(torch.LongTensor)
         optimizer.zero_grad()
@@ -242,7 +233,6 @@ def evaluate(model, test_idxs, fold, train_idxs):
             max_acc = accuracy
             max_rec = recall
             max_prec = precision
-#             save(model, os.path.join(prefix, 'Model/ClassificationWhole/Text/BiLSTM_{}_{:.2f}_{}'.format(config['hidden_dims'], max_f1, fold)))
             save(model, os.path.join(prefix, 'DAICCode/ClassificationWhole/Text/Bootstrap/BiLSTM_{}_{:.2f}_{}'.format(config['hidden_dims'], max_f1, fold)))
             print('*' * 64)
             print('model saved: f1: {}\tacc: {}'.format(max_f1, max_acc))
@@ -273,96 +263,10 @@ config = {
     'cuda': False,
 }
 
-# train_idxs_tmps = [np.load(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.63_1.npy'), allow_pickle=True),
-# np.load(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.60_2.npy'), allow_pickle=True),
-# np.load(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.60_3.npy'), allow_pickle=True)]
-# fold = 1
-
-# for idx_idx, train_idxs_tmp in enumerate(train_idxs_tmps):
-#     # if idx_idx != 2:
-#     #     continue
-#     test_idxs_tmp = list(set(list(text_dep_idxs_tmp)+list(text_non_idxs)) - set(train_idxs_tmp))
-#     train_idxs, test_idxs = [], []
-#     # depression data augmentation
-#     for idx in train_idxs_tmp:
-#         if idx in text_dep_idxs_tmp:
-#             feat = text_features[idx]
-#             count = 0
-#             resample_idxs = [0,1,2,3,4,5]
-#             for i in itertools.permutations(feat, feat.shape[0]):
-#                 if count in resample_idxs:
-#                     text_features = np.vstack((text_features, np.expand_dims(list(i), 0)))
-#                     text_targets = np.hstack((text_targets, 1))
-#                     train_idxs.append(len(text_features)-1)
-#                 count += 1
-#         else:
-#             train_idxs.append(idx)
-
-#     for idx in test_idxs_tmp:
-#         if idx in text_dep_idxs_tmp:
-#             feat = text_features[idx]
-#             count = 0
-#             # resample_idxs = random.sample(range(6), 4)
-#             resample_idxs = [0,1,4,5]
-#             for i in itertools.permutations(feat, feat.shape[0]):
-#                 if count in resample_idxs:
-#                     text_features = np.vstack((text_features, np.expand_dims(list(i), 0)))
-#                     text_targets = np.hstack((text_targets, 1))
-#                     test_idxs.append(len(text_features)-1)
-#                 count += 1
-#         else:
-#             test_idxs.append(idx)
-
-#     model = TextBiLSTM(config)
-
-#     param_group = get_param_group(model)
-#     optimizer = optim.AdamW(param_group, lr=config['learning_rate'])
-#     criterion = nn.CrossEntropyLoss()
-#     max_f1 = -1
-#     max_acc = -1
-#     max_rec = -1
-#     max_prec = -1
-#     train_acc = -1
-
-#     for ep in range(1, config['epochs']):
-#         train(ep, train_idxs)
-#         tloss = evaluate(model, test_idxs, fold, train_idxs)
-#     fold += 1
 
 
 fold = 1
 train_idxs, test_idxs = range(train_features.shape[0]), range(test_features.shape[0])
-# resample_idxs = [0,1,2,3,4,5]
-# # depression data augmentation
-# for idx in range(len(train_features)):
-#     if idx in train_dep_idxs:
-#         feat = train_features[idx]
-#         count = 0
-#         for i in itertools.permutations(feat, feat.shape[0]):
-#             if count in resample_idxs:
-#                 train_features = np.vstack((train_features, np.expand_dims(list(i), 0)))
-#                 train_targets = np.hstack((train_targets, 1))
-#                 train_idxs.append(len(train_features)-1)
-#             count += 1
-#     else:
-#         train_idxs.append(idx)
-
-# for idx in range(len(test_features)):
-#     if idx in test_dep_idxs:
-#         feat = test_features[idx]
-#         count = 0
-#         # resample_idxs = random.sample(range(6), 4)
-#         resample_idxs = [0,1,4,5]
-#         for i in itertools.permutations(feat, feat.shape[0]):
-#             if count in resample_idxs:
-#                 test_features = np.vstack((test_features, np.expand_dims(list(i), 0)))
-#                 test_targets = np.hstack((test_targets, 1))
-#                 test_idxs.append(len(test_features)-1)
-#             count += 1
-#     else:
-#         test_idxs.append(idx)
-#     test_idxs.append(idx)
-
 model = TextBiLSTM(config)
 
 param_group = get_param_group(model)
