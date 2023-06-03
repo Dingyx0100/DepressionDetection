@@ -16,10 +16,6 @@ import random
 import itertools
 
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
-# audio_features = np.squeeze(np.load(os.path.join(prefix, 'Features/whole_samples_clf_256.npz'))['arr_0'], axis=2)
-# audio_targets = np.load(os.path.join(prefix, 'Features/whole_labels_clf_256.npz'))['arr_0']
-# audio_dep_idxs_tmp = np.where(audio_targets == 1)[0]
-# audio_non_idxs = np.where(audio_targets == 0)[0]
 
 train_features = np.load(os.path.join(prefix, 'DAICCode/Features_c/train_audio_feat.npz'), allow_pickle=True)['arr_0']
 train_targets = np.load(os.path.join(prefix, 'DAICCode/Features_c/train_audio_tar.npz'), allow_pickle=True)['arr_0']
@@ -27,10 +23,7 @@ test_features = np.load(os.path.join(prefix, 'DAICCode/Features_c/test_audio_fea
 test_targets = np.load(os.path.join(prefix, 'DAICCode/Features_c/test_audio_tar.npz'), allow_pickle=True)['arr_0']
 train_features = train_features[:, np.newaxis, :]
 test_features = test_features[:, np.newaxis, :]
-# train_features = np.load(os.path.join(prefix, 'DAICCode/Features3/train_samples_clf.npz'), allow_pickle=True)['arr_0']
-# train_targets = np.load(os.path.join(prefix, 'DAICCode/Features3/train_labels_clf.npz'), allow_pickle=True)['arr_0']
-# test_features = np.load(os.path.join(prefix, 'DAICCode/Features3/test_samples_clf.npz'), allow_pickle=True)['arr_0']
-# test_targets = np.load(os.path.join(prefix, 'DAICCode/Features3/test_labels_clf.npz'), allow_pickle=True)['arr_0']
+
 test_label = np.load(os.path.join(prefix, 'DAICCode/Features/test_labels_clf.npz'), allow_pickle=True)['arr_0']
 num_list = np.load(os.path.join(prefix, 'DAICCode/Features4/numl.npz'), allow_pickle=True)['arr_0']
 train_dep_idxs = np.where(train_targets == 1)[0]
@@ -168,13 +161,14 @@ def model_performance(y_test, y_test_pred_proba):
     Evaluation metrics for network performance.
     """
     y_test_pred = y_test_pred_proba.data.max(1, keepdim=True)[1]
-#     print(np.squeeze(np.array(y_test_pred)))
-#     y_test_pred = (np.reshape(np.squeeze(np.array(y_test_pred)), (33,4)).mean(axis=1)>=0.5).astype(int)
-#     index_l = np.hstack((np.array([0]), np.cumsum(num_list)))
-#     y_test_pred = np.squeeze(np.array(y_test_pred))
-#     score_m = np.array([np.mean(y_test_pred[index_l[j]:index_l[j+1]]) for j in range(len(num_list))])
-#     y_test_pred = (score_m>=0.5).astype(int)
-#     print(score_m)
+    
+    # experiment on threshold to see the effect on result
+    # y_test_pred = (np.reshape(np.squeeze(np.array(y_test_pred)), (33,4)).mean(axis=1)>=0.5).astype(int)
+    # index_l = np.hstack((np.array([0]), np.cumsum(num_list)))
+    # y_test_pred = np.squeeze(np.array(y_test_pred))
+    # score_m = np.array([np.mean(y_test_pred[index_l[j]:index_l[j+1]]) for j in range(len(num_list))])
+    # y_test_pred = (score_m>=0.5).astype(int)
+    # print(score_m)
 
     # Computing confusion matrix for test dataset
     conf_matrix = standard_confusion_matrix(y_test, y_test_pred)  # y_test_pred.numpy()
@@ -190,8 +184,6 @@ def train(epoch, train_idxs):
     total_loss = 0
     correct = 0
     pred = np.array([])
-#     X_train = audio_features[train_idxs]
-#     Y_train = audio_targets[train_idxs]
     X_train = train_features[train_idxs]
     Y_train = train_targets[train_idxs]
     for i in range(0, X_train.shape[0], config['batch_size']):
@@ -206,20 +198,14 @@ def train(epoch, train_idxs):
             x, y = Variable(torch.from_numpy(x).type(torch.FloatTensor), requires_grad=True), \
                 Variable(torch.from_numpy(y))
 
-        # 将模型的参数梯度设置为0
         optimizer.zero_grad()
-#         print(x.shape)
         output = model(x)
         pred = output.data.max(1, keepdim=True)[1]
-        #print(pred.shape, y.shape)
         correct += pred.eq(y.data.view_as(pred)).cpu().sum()
         loss = criterion(output, y)
-        # 后向传播调整参数
         loss.backward()
-        # 根据梯度更新网络参数
         optimizer.step()
         batch_idx += 1
-        # loss.item()能够得到张量中的元素值
         total_loss += loss.item()
 
     train_acc = correct
@@ -237,13 +223,9 @@ def evaluate(model, test_idxs, fold, train_idxs_tmp, train_idxs):
     pred = np.array([])
     with torch.no_grad():
         if config['cuda']:
-#             x, y = Variable(torch.from_numpy(audio_features[test_idxs]).type(torch.FloatTensor), requires_grad=True).cuda(),\
-#                 Variable(torch.from_numpy(audio_targets[test_idxs])).cuda()
             x, y = Variable(torch.from_numpy(test_features).type(torch.FloatTensor), requires_grad=True).cuda(),\
                 Variable(torch.from_numpy(test_targets)).cuda()
         else:
-#             x, y = Variable(torch.from_numpy(audio_features[test_idxs]).type(torch.FloatTensor), requires_grad=True), \
-#                 Variable(torch.from_numpy(audio_targets[test_idxs])).type(torch.LongTensor)
             x, y = Variable(torch.from_numpy(test_features).type(torch.FloatTensor), requires_grad=True), \
                 Variable(torch.from_numpy(test_targets)).type(torch.LongTensor)
         optimizer.zero_grad()
@@ -268,9 +250,7 @@ def evaluate(model, test_idxs, fold, train_idxs_tmp, train_idxs):
             max_rec = recall
             max_prec = precision
             mode ='gru'
-            # save(model, os.path.join(prefix, 'Model/ClassificationWhole/Audio/BiLSTM_{}_vlad{}_{}_{:.2f}_{}'.format(mode, config['embedding_size'], config['hidden_dims'], max_f1, fold)))
             save(model, os.path.join(prefix, 'DAICCode/ClassificationWhole/Audio/Bootstrap/BiLSTM_{}_vlad{}_{}_{:.2f}_{}'.format(mode, config['embedding_size'], config['hidden_dims'], max_f1, 'c')))
-#             np.save(os.path.join(prefix, 'Features/TextWhole/train_idxs_{:.2f}_{}.npy'.format(f1_score, fold)), train_idxs_tmp)
             print('*' * 64)
             print('model saved: f1: {}\tacc: {}'.format(max_f1, max_acc))
             print('*' * 64)
@@ -288,42 +268,8 @@ def get_param_group(model):
     return [{'params': param_list, 'weight_decay': 1e-5}, {'params': nd_list, 'weight_decay': 0}]
 
 if __name__ == '__main__':
-    # kf = KFold(n_splits=3, shuffle=True)
-    # fold = 1
-    # for train_idxs_tmp, test_idxs_tmp in kf.split(audio_features):
     fold = 1
-    train_idxs, test_idxs = range(train_features.shape[0]), range(test_features.shape[0]) #[], [] 
-#     resample_idxs = [0,1,2,3,4,5]
-    # depression data augmentation
-#     for idx in range(len(train_features)):
-#         if idx in train_dep_idxs:
-#             feat = train_features[idx]
-#             count = 0
-#             for i in itertools.permutations(feat, feat.shape[0]):
-#                 if count in resample_idxs:
-#                     train_features = np.vstack((train_features, np.expand_dims(list(i), 0)))
-#                     train_targets = np.hstack((train_targets, 1))
-#                     train_idxs.append(len(train_features)-1)
-#                 count += 1
-#         else:
-#             train_idxs.append(idx)
-    
-
-#     for idx in range(len(test_features)):
-#         if idx in test_dep_idxs:
-#             feat = test_features[idx]
-#             count = 0
-#             # resample_idxs = random.sample(range(6), 4)
-#             resample_idxs = [0,1,4,5]
-#             for i in itertools.permutations(feat, feat.shape[0]):
-#                 if count in resample_idxs:
-#                     test_features = np.vstack((test_features, np.expand_dims(list(i), 0)))
-#                     test_targets = np.hstack((test_targets, 1))
-#                     test_idxs.append(len(test_features)-1)
-#                 count += 1
-#         else:
-#             test_idxs.append(idx)
-#         test_idxs.append(idx)
+    train_idxs, test_idxs = range(train_features.shape[0]), range(test_features.shape[0])
 
     model = AudioBiLSTM(config)
 
@@ -344,62 +290,3 @@ if __name__ == '__main__':
         train(ep, train_idxs)
         tloss = evaluate(model, test_idxs, fold, range(len(train_features)), train_idxs)
     
-#     train_idxs_tmps = [np.load(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.63_1.npy'), allow_pickle=True),
-#     np.load(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.60_2.npy'), allow_pickle=True),
-#     np.load(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.60_3.npy'), allow_pickle=True)]
-#     for idx_idx, train_idxs_tmp in enumerate(train_idxs_tmps):
-#         fold = idx_idx + 1
-#         # if idx_idx != 1:
-#         #     continue
-#         test_idxs_tmp = list(set(list(audio_dep_idxs_tmp)+list(audio_non_idxs)) - set(train_idxs_tmp))
-#         train_idxs, test_idxs = [], []
-#         resample_idxs = [0,1,2,3,4,5]
-#         # depression data augmentation
-#         for idx in train_idxs_tmp:
-#             if idx in audio_dep_idxs_tmp:
-#                 feat = audio_features[idx]
-#                 count = 0
-#                 for i in itertools.permutations(feat, feat.shape[0]):
-#                     if count in resample_idxs:
-#                         audio_features = np.vstack((audio_features, np.expand_dims(list(i), 0)))
-#                         audio_targets = np.hstack((audio_targets, 1))
-#                         train_idxs.append(len(audio_features)-1)
-#                     count += 1
-#             else:
-#                 train_idxs.append(idx)
-
-#         for idx in test_idxs_tmp:
-#             if idx in audio_dep_idxs_tmp:
-#                 feat = audio_features[idx]
-#                 count = 0
-#                 # resample_idxs = random.sample(range(6), 4)
-#                 resample_idxs = [0,1,4,5]
-#                 for i in itertools.permutations(feat, feat.shape[0]):
-#                     if count in resample_idxs:
-#                         audio_features = np.vstack((audio_features, np.expand_dims(list(i), 0)))
-#                         audio_targets = np.hstack((audio_targets, 1))
-#                         test_idxs.append(len(audio_features)-1)
-#                     count += 1
-#             else:
-#                 test_idxs.append(idx)
-#             # test_idxs.append(idx)
-
-#         model = AudioBiLSTM(config)
-
-#         if config['cuda']:
-#             model = model.cuda()
-
-#         param_group = get_param_group(model)
-#         optimizer = optim.AdamW(param_group, lr=config['learning_rate'])
-#         criterion = nn.CrossEntropyLoss()
-#         # criterion = FocalLoss(class_num=2)
-#         max_f1 = -1
-#         max_acc = -1
-#         max_rec = -1
-#         max_prec = -1
-#         train_acc = -1
-
-#         for ep in range(1, config['epochs']):
-#             train(ep, train_idxs)
-#             tloss = evaluate(model, test_idxs, fold, train_idxs_tmp, train_idxs)
-#         fold += 1
