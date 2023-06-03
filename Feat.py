@@ -2,7 +2,6 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 import librosa
 import sys
-# sys.path.append('/Users/linlin/Desktop/DepressionCollected')
 from Classification.audio_features_whole import wav2vlad
 
 import numpy as np
@@ -12,7 +11,7 @@ import wave
 import jieba
 
 from elmoformanylangs import Embedder
-# elmo = Embedder('../autodl-tmp/eng.model')
+# elmo = Embedder('./eng.model')
 
 
 prefix = os.getcwd()
@@ -74,8 +73,7 @@ def extract_features(number):
             stopt += start_time-lastt
             response += (' ' + getattr(t,'value'))
             signal = np.hstack((signal, wave_data[start_time:stop_time].astype(np.float64)))
-    
-#     text_feats = [np.array(item).mean(axis=0) for item in elmo.sents2elmo(text)]
+
     print(np.shape(feats))
     print('{}_P feature done'.format(number))
     return feats
