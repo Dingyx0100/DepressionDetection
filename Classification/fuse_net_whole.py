@@ -11,22 +11,12 @@ import wave
 import librosa
 from python_speech_features import *
 import re
-# from allennlp.commands.elmo import ElmoEmbedder
 import os
 import tensorflow.compat.v1 as tf
 import itertools
 
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
 
-# text_features = np.load(os.path.join(prefix, 'Features/TextWhole/whole_samples_clf_avg.npz'))['arr_0']
-# text_targets = np.load(os.path.join(prefix, 'Features/TextWhole/whole_labels_clf_avg.npz'))['arr_0']
-# audio_features = np.squeeze(np.load(os.path.join(prefix, 'Features/AudioWhole/whole_samples_clf_256.npz'))['arr_0'], axis=2)
-# audio_targets = np.load(os.path.join(prefix, 'Features/AudioWhole/whole_labels_clf_256.npz'))['arr_0']
-# fuse_features = [[audio_features[i], text_features[i]] for i in range(text_features.shape[0])]
-# fuse_targets = text_targets
-
-# fuse_dep_idxs = np.where(text_targets == 1)[0]
-# fuse_non_idxs = np.where(text_targets == 0)[0]
 audio_train_features = np.load(os.path.join(prefix, 'DAICCode/Features3/train_samples_clf.npz'), allow_pickle=True)['arr_0']
 audio_test_features = np.load(os.path.join(prefix, 'DAICCode/Features3/test_samples_clf.npz'), allow_pickle=True)['arr_0']
 text_train_features = np.load(os.path.join(prefix, 'DAICCode/Features3/train_text_clf.npz'), allow_pickle=True)['arr_0']
@@ -347,9 +337,6 @@ class fusion_net(nn.Module):
         with torch.no_grad():
             x_text = x[:, :, 256:]
             x_audio = x[:, :, :256]
-#             for ele in x:
-#                 x_text.append(ele[1])
-#                 x_audio.append(ele[0])
             x_text, x_audio = Variable(torch.tensor(x_text).type(torch.FloatTensor), requires_grad=False), Variable(torch.tensor(x_audio).type(torch.FloatTensor), requires_grad=False)
             # ============================= TextBiLSTM =================================
             # x : [len_seq, batch_size, embedding_dim]
@@ -436,9 +423,6 @@ def train(epoch, train_idxs):
     correct = 0
     X_train = np.dstack((audio_train_features, text_train_features))
     Y_train = train_targets
-#     for idx in train_idxs:
-#         X_train.append(fuse_features[idx])
-#         Y_train.append(fuse_targets[idx])
     for i in range(0, len(X_train), config['batch_size']):
         if i + config['batch_size'] > len(X_train):
             x, y = X_train[i:], Y_train[i:]
@@ -457,7 +441,6 @@ def train(epoch, train_idxs):
         # add_x = text_feature.add(audio_feature)
         output = model(concat_x)
         pred = output.data.max(1, keepdim=True)[1]
-#         print(pred.shape, y.shape)
         correct += pred.eq(torch.tensor(y).data.view_as(pred)).cpu().sum()
         # loss = criterion(output, torch.tensor(y))
         loss = criterion(text_feature, audio_feature, y, model)
@@ -483,9 +466,6 @@ def evaluate(model, test_idxs, fold, train_idxs):
     pred = torch.empty(config['batch_size'], 1).type(torch.LongTensor)
     X_test = np.dstack((audio_test_features, text_test_features))
     Y_test = test_targets
-#     for idx in test_idxs:
-#         X_test.append(fuse_features[idx])
-#         Y_test.append(fuse_targets[idx])
     global max_train_acc, max_acc,max_f1
     for i in range(0, len(X_test), config['batch_size']):
         if i + config['batch_size'] > len(X_test):
@@ -532,45 +512,8 @@ def evaluate(model, test_idxs, fold, train_idxs):
 
 if __name__ == '__main__':
     fold = 1
-    # if fold != 2:
-    #     continue
-#     train_idxs_tmp = np.load(os.path.join(prefix, 'Features/TextWhole/{}'.format(idxs_paths[fold-1])), allow_pickle=True)
-#     test_idxs_tmp = list(set(list(fuse_dep_idxs)+list(fuse_non_idxs)) - set(train_idxs_tmp))
-#     resample_idxs = list(range(6))
-
     train_idxs, test_idxs = range(train_targets.shape[0]), range(test_targets.shape[0])
-    # depression data augmentation
-#     for idx in train_idxs_tmp:
-#         if idx in fuse_dep_idxs:
-#             feat = fuse_features[idx]
-#             audio_perm = itertools.permutations(feat[0], 3)
-#             text_perm = itertools.permutations(feat[1], 3)
-#             count = 0
-#             for fuse_perm in zip(audio_perm, text_perm):
-#                 if count in resample_idxs:
-#                     fuse_features.append(fuse_perm)
-#                     fuse_targets = np.hstack((fuse_targets, 1))
-#                     train_idxs.append(len(fuse_features)-1)
-#                 count += 1
-#         else:
-#             train_idxs.append(idx)
-
-#     for idx in test_idxs_tmp:
-#         if idx in fuse_dep_idxs:
-#             feat = fuse_features[idx]
-#             audio_perm = itertools.permutations(feat[0], 3)
-#             text_perm = itertools.permutations(feat[1], 3)
-#             count = 0
-#             resample_idxs = [0,1,4,5]
-#             for fuse_perm in zip(audio_perm, text_perm):
-#                 if count in resample_idxs:
-#                     fuse_features.append(fuse_perm)
-#                     fuse_targets = np.hstack((fuse_targets, 1))
-#                     test_idxs.append(len(fuse_features)-1)
-#                 count += 1
-#         else:
-#             test_idxs.append(idx)
-
+    
     text_lstm_model = torch.load(os.path.join(prefix, 'DAICCode/ClassificationWhole/Text/squeezed/BiLSTM_128_0.41_Feature3.pt'))
     audio_lstm_model = torch.load(os.path.join(prefix, 'DAICCode/ClassificationWhole/Audio/squeezed/BiLSTM_gru_vlad256_256_0.52_Feature3.pt'))
     model_state_dict = {}
