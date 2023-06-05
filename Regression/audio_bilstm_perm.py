@@ -15,19 +15,7 @@ import random
 import itertools
 
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
-# audio_features = np.squeeze(np.load(os.path.join(prefix, 'Features/whole_samples_reg_256.npz'))['arr_0'], axis=2)
-# audio_targets = np.load(os.path.join(prefix, 'Features/whole_labels_reg_256.npz'))['arr_0']
 
-# audio_dep_idxs = np.where(audio_targets >= 53)[0]
-# audio_non_idxs = np.where(audio_targets < 53)[0]
-# dep_orders = random.sample(range(len(audio_dep_idxs)), len(audio_dep_idxs))
-# non_orders = random.sample(range(len(audio_non_idxs)), len(audio_non_idxs))
-# dep_idxs = audio_dep_idxs[dep_orders]
-# non_idxs = audio_non_idxs[non_orders]
-# np.save(os.path.join(prefix, 'Features/AudioWhole/dep_idxs'), dep_idxs)
-# np.save(os.path.join(prefix, 'Features/AudioWhole/non_idxs'), non_idxs)
-# dep_idxs = np.load(os.path.join(prefix, 'Features/AudioWhole/dep_idxs.npy'), allow_pickle=True)
-# non_idxs = np.load(os.path.join(prefix, 'Features/AudioWhole/non_idxs.npy'), allow_pickle=True)
 train_features = np.load(os.path.join(prefix, 'DAICCode/Features2/train_samples_reg.npz'), allow_pickle=True)['arr_0']
 train_targets = np.load(os.path.join(prefix, 'DAICCode/Features2/train_labels_reg.npz'), allow_pickle=True)['arr_0']
 test_features = np.load(os.path.join(prefix, 'DAICCode/Features2/test_samples_reg.npz'), allow_pickle=True)['arr_0']
@@ -147,8 +135,6 @@ def train(epoch):
     total_loss = 0
     correct = 0
     pred = np.array([])
-#     X_train = audio_features[train_dep_idxs+train_non_idxs]
-#     Y_train = audio_targets[train_dep_idxs+train_non_idxs]
     X_train = train_features
     Y_train = train_targets
     for i in range(0, X_train.shape[0], config['batch_size']):
@@ -189,8 +175,6 @@ def evaluate(fold, model, train_mae):
     total_loss = 0
     global min_mae, min_rmse, test_dep_idxs, test_non_idxs
     pred = np.array([])
-#     X_test = audio_features[list(test_dep_idxs)+list(test_non_idxs)]
-#     Y_test = audio_targets[list(test_dep_idxs)+list(test_non_idxs)]
     X_test = test_features
     Y_test = test_targets
     with torch.no_grad():
@@ -218,89 +202,12 @@ def evaluate(fold, model, train_mae):
             min_rmse = rmse
             mode = 'bi' if config['bidirectional'] else 'norm'
             mode ='gru'
-#             save(model, os.path.join(prefix, 'Model/Regression/Audio{}/{}_vlad{}_{}_{:.2f}'.format(fold+1,mode, config['embedding_size'], config['hidden_dims'], min_mae)))
             save(model, os.path.join(prefix, 'DAICCode/Regression/Audio/Feature2_vlad{}_{}_{:.2f}'.format(mode, config['embedding_size'], config['hidden_dims'], min_mae)))
             print('*' * 64)
             print('model saved: mae: {}\t rmse: {}'.format(min_mae, min_rmse))
             print('*' * 64)
 
     return total_loss
-
-
-# for fold in range(3):
-#     test_dep_idxs_tmp = dep_idxs[fold*10:(fold+1)*10]
-#     test_non_idxs = non_idxs[fold*44:(fold+1)*44]
-#     train_dep_idxs_tmp = list(set(dep_idxs) - set(test_dep_idxs_tmp))
-#     train_non_idxs = list(set(non_idxs) - set(test_non_idxs))
-
-#     # training data augmentation
-#     train_dep_idxs = []
-#     for (i, idx) in enumerate(train_dep_idxs_tmp):
-#         feat = audio_features[idx]
-#         if i < 14:
-#             for i in itertools.permutations(feat, feat.shape[0]):
-#                 audio_features = np.vstack((audio_features, np.expand_dims(list(i), 0)))
-#                 audio_targets = np.hstack((audio_targets, audio_targets[idx]))
-#                 train_dep_idxs.append(len(audio_features)-1)
-#         else:
-#             train_dep_idxs.append(idx)
-
-#     # test data augmentation
-#     # test_dep_idxs = []
-#     # for idx in test_dep_idxs_tmp:
-#     #     feat = audio_features[idx]
-#     #     for i in itertools.permutations(feat, feat.shape[0]):
-#     #         audio_features = np.vstack((audio_features, np.expand_dims(list(i), 0)))
-#     #         audio_targets = np.hstack((audio_targets, audio_targets[idx]))
-#     #         test_dep_idxs.append(len(audio_features)-1)
-#     test_dep_idxs = test_dep_idxs_tmp
-
-
-#     model = AudioBiLSTM(config)
-
-#     if config['cuda']:
-#         model = model.cuda()
-
-#     # optimizer = optim.Adam(model.parameters())
-#     optimizer = optim.Adam(model.parameters(), lr=config['learning_rate'])
-#     criterion = nn.L1Loss()
-#     # criterion = FocalLoss(class_num=2)
-#     min_mae = 100
-#     min_rmse = 100
-#     train_mae = 100
-
-
-#     for ep in range(1, config['epochs']):
-#         train_mae = train(ep)
-#         tloss = evaluate(fold, model, train_mae)
-
-
-# test_dep_idxs_tmp = dep_idxs[fold*10:(fold+1)*10]
-# test_non_idxs = non_idxs[fold*44:(fold+1)*44]
-# train_dep_idxs_tmp = list(set(dep_idxs) - set(test_dep_idxs_tmp))
-# train_non_idxs = list(set(non_idxs) - set(test_non_idxs))
-
-# training data augmentation
-# train_dep_idxs = []
-# for (i, idx) in enumerate(train_dep_idxs_tmp):
-#     feat = audio_features[idx]
-#     if i < 14:
-#         for i in itertools.permutations(feat, feat.shape[0]):
-#             audio_features = np.vstack((audio_features, np.expand_dims(list(i), 0)))
-#             audio_targets = np.hstack((audio_targets, audio_targets[idx]))
-#             train_dep_idxs.append(len(audio_features)-1)
-#     else:
-#         train_dep_idxs.append(idx)
-
-# test data augmentation
-# test_dep_idxs = []
-# for idx in test_dep_idxs_tmp:
-#     feat = audio_features[idx]
-#     for i in itertools.permutations(feat, feat.shape[0]):
-#         audio_features = np.vstack((audio_features, np.expand_dims(list(i), 0)))
-#         audio_targets = np.hstack((audio_targets, audio_targets[idx]))
-#         test_dep_idxs.append(len(audio_features)-1)
-# test_dep_idxs = test_dep_idxs_tmp
 
 
 model = AudioBiLSTM(config)
@@ -320,12 +227,6 @@ train_mae = 100
 for ep in range(1, config['epochs']):
     train_mae = train(ep)
     tloss = evaluate(2, model, train_mae)
-
-# ============== prep ==============
-# X_test = np.squeeze(np.load(os.path.join(prefix, 'Features/Audio/val_samples_reg_avid256.npz'))['arr_0'], axis=2)
-# Y_test = np.load(os.path.join(prefix, 'Features/Audio/val_labels_reg_avid256.npz'))['arr_0']
-# ============== prep ==============
-
 
 # ============== SVM ==============
 
