@@ -6,6 +6,15 @@ This is an in-class project that focused on depression detection. The model used
 The datasets used in this project is a public English depression dataset called DAIC-WoZ dataset, provided by the University of Southern California. In the datasets, several sorts of data are provided for each participants including the video and text transcripts of the interview and detailed data on the participants' PHQ-8 scores, which was also used as a criterion to set the ground truth for classification. The database required application for usage, thus is not provided here. The database could be applied here: https://dcapswoz.ict.usc.edu/
 
 
+The Sampling in document was based on the statistical results below:
+
+
+The resampling was based on:
+
+
+The sample selection was based on:
+
+
 A more detailed final report is available here: https://drive.google.com/file/d/1IoBBWEQHIehzyn-WoLK28Hm9U_a7xgLn/view?usp=share_link
 
 
