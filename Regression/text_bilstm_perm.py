@@ -15,11 +15,7 @@ import random
 import itertools
 
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
-# text_features = np.load(os.path.join(prefix, 'Features/TextWhole/whole_samples_reg_avg.npz'))['arr_0']
-# text_targets = np.load(os.path.join(prefix, 'Features/TextWhole/whole_labels_reg_avg.npz'))['arr_0']
 
-# dep_idxs = np.load(os.path.join(prefix, 'Features/AudioWhole/dep_idxs.npy'), allow_pickle=True)
-# non_idxs = np.load(os.path.join(prefix, 'Features/AudioWhole/non_idxs.npy'), allow_pickle=True)
 train_features = np.load(os.path.join(prefix, 'DAICCode/Features2/train_text_clf.npz'), allow_pickle=True)['arr_0']
 train_targets = np.load(os.path.join(prefix, 'DAICCode/Features2/train_labels_reg.npz'), allow_pickle=True)['arr_0']
 test_features = np.load(os.path.join(prefix, 'DAICCode/Features2/test_text_clf.npz'), allow_pickle=True)['arr_0']
@@ -183,8 +179,8 @@ def evaluate(fold, model, train_mae):
     total_loss = 0
     global min_mae, min_rmse, test_dep_idxs, test_non_idxs
     pred = np.array([])
-    X_test = test_features  # [list(test_dep_idxs)+list(test_non_idxs)]
-    Y_test = test_targets  # [list(test_dep_idxs)+list(test_non_idxs)]
+    X_test = test_features
+    Y_test = test_targets
     with torch.no_grad():
         if config['cuda']:
             x, y = Variable(torch.from_numpy(X_test).type(torch.FloatTensor), requires_grad=True).cuda(),\
@@ -210,66 +206,30 @@ def evaluate(fold, model, train_mae):
             min_rmse = rmse
             mode = 'bi' if config['bidirectional'] else 'norm'
             mode ='gru'
-#             save(model, os.path.join(prefix, 'Model/Regression/Text{}/BiLSTM_{}_{:.2f}'.format(fold+1, config['hidden_dims'], min_mae)))
             save(model, os.path.join(prefix, 'DAICCode/Regression/Text/BiLSTM_{}_{:.2f}'.format(fold+1, config['hidden_dims'], min_mae)))
-#             np.save(os.path.join(prefix, 'Features/TextWhole/train_idxs_0.60_{}.npy'.format(fold+1)), train_dep_idxs+train_non_idxs)
             print('*' * 64)
             print('model saved: mae: {}\t rmse: {}'.format(min_mae, min_rmse))
             print('*' * 64)
 
     return total_loss
 
-# for fold in range(3):
-#     test_dep_idxs_tmp = dep_idxs[fold*10:(fold+1)*10]
-#     test_non_idxs = non_idxs[fold*44:(fold+1)*44]
-#     train_dep_idxs_tmp = list(set(dep_idxs) - set(test_dep_idxs_tmp))
-#     train_non_idxs = list(set(non_idxs) - set(test_non_idxs))
 
-#     # training data augmentation
-#     train_dep_idxs = []
-#     for (i, idx) in enumerate(train_dep_idxs_tmp):
-#         feat = text_features[idx]
-#         if i < 14:
-#             for i in itertools.permutations(feat, feat.shape[0]):
-#                 text_features = np.vstack((text_features, np.expand_dims(list(i), 0)))
-#                 text_targets = np.hstack((text_targets, text_targets[idx]))
-#                 train_dep_idxs.append(len(text_features)-1)
-#         else:
-#             train_dep_idxs.append(idx)
+model = TextBiLSTM(config)
 
-#     # test data augmentation
-#     # test_dep_idxs = []
-#     # for idx in test_dep_idxs_tmp:
-#     #     feat = text_features[idx]
-#     #     for i in itertools.permutations(feat, feat.shape[0]):
-#     #         text_features = np.vstack((text_features, np.expand_dims(list(i), 0)))
-#     #         text_targets = np.hstack((text_targets, text_targets[idx]))
-#     #         test_dep_idxs.append(len(text_features)-1)
-#     test_dep_idxs = test_dep_idxs_tmp
+if config['cuda']:
+    model = model.cuda()
+
+optimizer = optim.Adam(model.parameters(), lr=config['learning_rate'])
+criterion = nn.SmoothL1Loss()
+# criterion = FocalLoss(class_num=2)
+min_mae = 100
+min_rmse = 100
+train_mae = 100
 
 
-# model = TextBiLSTM(config)
-
-# if config['cuda']:
-#     model = model.cuda()
-
-# optimizer = optim.Adam(model.parameters(), lr=config['learning_rate'])
-# criterion = nn.SmoothL1Loss()
-# # criterion = FocalLoss(class_num=2)
-# min_mae = 100
-# min_rmse = 100
-# train_mae = 100
-
-
-# for ep in range(1, config['epochs']):
-#     train_mae = train(ep)
-#     tloss = evaluate(1, model, train_mae)
-
-# ============== prep ==============
-# X_test = np.squeeze(np.load(os.path.join(prefix, 'Features/Audio/val_samples_reg_avid256.npz'))['arr_0'], axis=2)
-# Y_test = np.load(os.path.join(prefix, 'Features/Audio/val_labels_reg_avid256.npz'))['arr_0']
-# ============== prep ==============
-
+for ep in range(1, config['epochs']):
+    train_mae = train(ep)
+    tloss = evaluate(1, model, train_mae)
 
 # ============== SVM ==============
 
@@ -283,10 +243,6 @@ def evaluate(fold, model, train_mae):
 # X_test, Y_test = test_features, test_targets
 # regr = SVR(kernel='linear', gamma='auto')
 # maes, rmses = [], []
-# # for train_index, test_index in kf.split(X):
-# # X_train, X_test = X[train_index], X[test_index]
-# # Y_train, Y_test = Y[train_index], Y[test_index]
-# # X_train, Y_train = X[train_index], Y[train_index]
 # regr.fit([f.flatten() for f in X_train], Y_train)
 # pred = regr.predict([f.flatten() for f in X_test])
 
@@ -306,17 +262,10 @@ def evaluate(fold, model, train_mae):
 # from sklearn.tree import DecisionTreeRegressor
 # from sklearn.model_selection import KFold
 
-# # X = text_features[train_dep_idxs+train_non_idxs+test_dep_idxs+test_non_idxs]
-# # Y = text_targets[train_dep_idxs+train_non_idxs+test_dep_idxs+test_non_idxs]
-# # kf = KFold(n_splits=3)
 # X_train, Y_train = train_features, train_targets
 # X_test, Y_test = test_features, test_targets
 # regr = DecisionTreeRegressor(max_depth=100, random_state=0, criterion="mse")
 # maes, rmses = [], []
-# # for train_index, test_index in kf.split(X):
-# # X_train, X_test = X[train_index], X[test_index]
-# # Y_train, Y_test = Y[train_index], Y[test_index]
-# # X_train, Y_train = X[train_index], Y[train_index]
 # regr.fit([f.flatten() for f in X_train], Y_train)
 # pred = regr.predict([f.flatten() for f in X_test])
 
@@ -335,17 +284,10 @@ def evaluate(fold, model, train_mae):
 # from sklearn.ensemble import RandomForestRegressor
 # from sklearn.model_selection import KFold
 
-# # X = text_features[train_dep_idxs+train_non_idxs+test_dep_idxs+test_non_idxs]
-# # Y = text_targets[train_dep_idxs+train_non_idxs+test_dep_idxs+test_non_idxs]
-# # kf = KFold(n_splits=3)
 # X_train, Y_train = train_features, train_targets
 # X_test, Y_test = test_features, test_targets
 # regr = RandomForestRegressor(max_depth=100, random_state=0, criterion="mse")
 # maes, rmses = [], []
-# # for train_index, test_index in kf.split(X):
-# # X_train, X_test = X[train_index], X[test_index]
-# # Y_train, Y_test = Y[train_index], Y[test_index]
-# # X_train, Y_train = X[train_index], Y[train_index]
 # regr.fit([f.flatten() for f in X_train], Y_train)
 # pred = regr.predict([f.flatten() for f in X_test])
 
@@ -361,30 +303,23 @@ def evaluate(fold, model, train_mae):
 # # ============== RF ==============
 
 # ============== ada ==============
-from sklearn.ensemble import AdaBoostRegressor
-from sklearn.model_selection import KFold
+# from sklearn.ensemble import AdaBoostRegressor
+# from sklearn.model_selection import KFold
 
-# X = text_features[train_dep_idxs+train_non_idxs+test_dep_idxs+test_non_idxs]
-# Y = text_targets[train_dep_idxs+train_non_idxs+test_dep_idxs+test_non_idxs]
-# kf = KFold(n_splits=3)
-X_train, Y_train = train_features, train_targets
-X_test, Y_test = test_features, test_targets
-regr = AdaBoostRegressor(n_estimators=50)
-maes, rmses = [], []
-# for train_index, test_index in kf.split(X):
-# X_train, X_test = X[train_index], X[test_index]
-# Y_train, Y_test = Y[train_index], Y[test_index]
-# X_train, Y_train = X[train_index], Y[train_index]
-regr.fit([f.flatten() for f in X_train], Y_train)
-pred = regr.predict([f.flatten() for f in X_test])
+# X_train, Y_train = train_features, train_targets
+# X_test, Y_test = test_features, test_targets
+# regr = AdaBoostRegressor(n_estimators=50)
+# maes, rmses = [], []
+# regr.fit([f.flatten() for f in X_train], Y_train)
+# pred = regr.predict([f.flatten() for f in X_test])
 
-mae = mean_absolute_error(Y_test, pred)
-rmse = np.sqrt(mean_squared_error(Y_test, pred))
-maes.append(mae)
-rmses.append(rmse)
+# mae = mean_absolute_error(Y_test, pred)
+# rmse = np.sqrt(mean_squared_error(Y_test, pred))
+# maes.append(mae)
+# rmses.append(rmse)
 
-print('MAE: {:.4f}\t RMSE: {:.4f}\n'.format(mae, rmse))
-print('='*89)
+# print('MAE: {:.4f}\t RMSE: {:.4f}\n'.format(mae, rmse))
+# print('='*89)
 
 # print(np.mean(maes), np.mean(rmses))
 # ============== ada ==============
