@@ -149,16 +149,12 @@ def train(epoch):
             x, y = Variable(torch.from_numpy(x).type(torch.FloatTensor), requires_grad=True), \
                 Variable(torch.from_numpy(y)).type(torch.FloatTensor)
 
-        # 将模型的参数梯度设置为0
         optimizer.zero_grad()
         output = model(x)
         loss = criterion(output, y.view_as(output))
-        # 后向传播调整参数
         loss.backward()
-        # 根据梯度更新网络参数
         optimizer.step()
         batch_idx += 1
-        # loss.item()能够得到张量中的元素值
         pred = np.hstack((pred, output.flatten().detach().numpy()))
         total_loss += loss.item()
     train_mae = mean_absolute_error(Y_train, pred)
