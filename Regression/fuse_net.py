@@ -11,24 +11,12 @@ import wave
 import librosa
 from python_speech_features import *
 import re
-# from allennlp.commands.elmo import ElmoEmbedder
 import os
 import tensorflow.compat.v1 as tf
 import itertools
 
 prefix = os.path.abspath(os.path.join(os.getcwd(), "./"))
 
-# text_features = np.load(os.path.join(prefix, 'Features/TextWhole/whole_samples_reg_avg.npz'))['arr_0']
-# text_targets = np.load(os.path.join(prefix, 'Features/TextWhole/whole_labels_reg_avg.npz'))['arr_0']
-# audio_features = np.squeeze(np.load(os.path.join(prefix, 'Features/AudioWhole/whole_samples_reg_256.npz'))['arr_0'], axis=2)
-# audio_targets = np.load(os.path.join(prefix, 'Features/AudioWhole/whole_labels_reg_256.npz'))['arr_0']
-# fuse_features = [[audio_features[i], text_features[i]] for i in range(text_features.shape[0])]
-# fuse_targets = text_targets
-
-# fuse_dep_idxs = np.where(text_targets >= 53)[0]
-# fuse_non_idxs = np.where(text_targets < 53)[0]
-# dep_idxs = np.load(os.path.join(prefix, 'Features/AudioWhole/dep_idxs.npy'), allow_pickle=True)
-# non_idxs = np.load(os.path.join(prefix, 'Features/AudioWhole/non_idxs.npy'), allow_pickle=True)
 train_audio_features = np.load(os.path.join(prefix, 'DAICCode/Features1/train_samples_reg.npz'), allow_pickle=True)['arr_0']
 test_audio_features = np.load(os.path.join(prefix, 'DAICCode/Features1/test_samples_reg.npz'), allow_pickle=True)['arr_0']
 test_text_features = np.load(os.path.join(prefix, 'DAICCode/Features1/test_text_clf.npz'), allow_pickle=True)['arr_0']
@@ -320,9 +308,6 @@ class fusion_net(nn.Module):
         with torch.no_grad():
             x_text = x[:, :, 256:]
             x_audio = x[:, :, :256]
-#             for ele in x:
-#                 x_text.append(ele[1])
-#                 x_audio.append(ele[0])
             x_text, x_audio = Variable(torch.tensor(x_text).type(torch.FloatTensor), requires_grad=False), Variable(torch.tensor(x_audio).type(torch.FloatTensor), requires_grad=False)
             # ============================= TextBiLSTM =================================
             # x : [len_seq, batch_size, embedding_dim]
@@ -385,9 +370,6 @@ def train(model, epoch):
     pred = np.array([])
     X_train = np.dstack((train_audio_features, train_text_features))
     Y_train = train_targets
-#     for idx in train_dep_idxs+train_non_idxs:
-#         X_train.append(fuse_features[idx])
-#         Y_train.append(fuse_targets[idx])
     for i in range(0, len(X_train), config['batch_size']):
         if i + config['batch_size'] > len(X_train):
             x, y = X_train[i:], Y_train[i:]
@@ -425,9 +407,6 @@ def evaluate(model, fold, train_mae):
     pred = np.array([])
     X_test = np.dstack((test_audio_features, test_text_features))
     Y_test = test_targets
-#     for idx in list(test_dep_idxs)+list(test_non_idxs):
-#         X_test.append(fuse_features[idx])
-#         Y_test.append(fuse_targets[idx])
     for i in range(0, len(X_test), config['batch_size']):
         if i + config['batch_size'] > len(X_test):
             x, y = X_test[i:], Y_test[i:]
@@ -503,9 +482,6 @@ def evaluate_text(model):
     pred = np.array([])
     X_test = []
     Y_test = []
-#     for idx in list(test_dep_idxs)+list(test_non_idxs):
-#         X_test.append(fuse_features[idx][1])
-#         Y_test.append(fuse_targets[idx])
     X_test = np.array(X_test)
     Y_test = np.array(Y_test)
     criterion = nn.SmoothL1Loss()
@@ -529,28 +505,6 @@ def evaluate_text(model):
         print('MAE: {:.4f}\t RMSE: {:.4f}\n'.format(mae, rmse))
         print('='*89)
 
-# for fold in range(3):
-#     test_dep_idxs_tmp = dep_idxs[fold*10:(fold+1)*10]
-#     test_non_idxs = non_idxs[fold*44:(fold+1)*44]
-#     train_dep_idxs_tmp = list(set(dep_idxs) - set(test_dep_idxs_tmp))
-#     train_non_idxs = list(set(non_idxs) - set(test_non_idxs))
-
-#     train_dep_idxs = []
-#     test_dep_idxs = []
-#     # depression data augmentation
-#     for (i, idx) in enumerate(train_dep_idxs_tmp):
-#         feat = fuse_features[idx]
-#         audio_perm = itertools.permutations(feat[0], 3)
-#         text_perm = itertools.permutations(feat[1], 3)
-#         if i < 14:
-#             for fuse_perm in zip(audio_perm, text_perm):
-#                 fuse_features.append(fuse_perm)
-#                 fuse_targets = np.hstack((fuse_targets, fuse_targets[idx]))
-#                 train_dep_idxs.append(len(fuse_features)-1)
-#         else:
-#             train_dep_idxs.append(idx)
-
-#     test_dep_idxs = test_dep_idxs_tmp
 
 model = fusion_net(config['text_embed_size'], config['text_hidden_dims'], config['rnn_layers'], \
 config['dropout'], config['num_classes'], config['audio_hidden_dims'], config['audio_embed_size'])
