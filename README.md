@@ -1,7 +1,7 @@
 # DepressionDetection
 
 #### Model
-This is an in-class project that focused on depression detection. The model used in the project refers to https://github.com/speechandlanguageprocessing/icassp2022-depression. Based on the model, our project also imports resampling method to try improving the final results. 
+This is an in-class project that focused on depression detection. The model used in the project refers to https://github.com/speechandlanguageprocessing/icassp2022-depression. The model is consisted of two main parts that trained audio and text features separately and then trained the whole data on a fused net. Based on the model, our project also explores on resampling method to try improving the final results. 
 
 
 #### Datasets
@@ -9,17 +9,11 @@ The datasets used in this project is a public English depression dataset called 
 
 
 #### Experiments
-The Sampling in document was based on the statistical results below:
+The responses are group consecutively by five. And to prevent the possible high fpr or ftr problem, the datasets are sampled (and resampled as below) so as to create a balance datasets. The Sampling in document was based on the statistical results below:
 
 
 <img src="img/stat_depression.png" width = "360" height = "250" alt="responses num of dep group" align=center>
 <img src="img/stat_nondep.png" width = "360" height = "250" alt="responses num of non-dep group" align=center>
-
-
-The resampling was based on:
-
-
-The sample selection was based on:
 
 
 A more detailed final report is available here: https://drive.google.com/file/d/1IoBBWEQHIehzyn-WoLK28Hm9U_a7xgLn/view?usp=share_link
