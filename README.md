@@ -10,7 +10,8 @@ The datasets used in this project is a public English depression dataset called 
 
 #### Experiments
 The Sampling in document was based on the statistical results below:
-![responses num of dep group](img/stat_depression.png)
+![responses num of dep group](img/stat_depression.png 400x300)
+![responses num of non-dep group](img/stat_nondep.png)
 
 The resampling was based on:
 
